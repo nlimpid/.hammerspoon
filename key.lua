@@ -106,10 +106,10 @@ eventtapWatcher = hs.eventtap.new({ types.keyDown, types.keyUp, types.flagsChang
   end
 
   function isEscDown ()
-    return code == 53 and eventType == 'keyDown' and util.contains({inspect({}), inspect({'fn'})}, flagsStr) and state.skipEscTimes == 0
+    return code == 53 and eventType == 'keyDown' and state.skipEscTimes == 0
   end
   function isEscUp ()
-    return code == 53 and eventType == 'keyUp' and util.contains({inspect({}), inspect({'fn'})}, flagsStr) and state.skipEscTimes == 0
+    return code == 53 and eventType == 'keyUp' and state.skipEscTimes == 0
   end
   function isEscComboDown ()
     return state.isEscDown and eventType == 'keyDown' and util.contains({inspect({}), inspect({'fn'})}, flagsStr)
