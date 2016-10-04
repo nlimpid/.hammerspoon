@@ -1,8 +1,16 @@
-local layout = {}
+layout = {}
 hs.window.animationDuration = 0
 -- hs.window.setFrameCorrectness = true
 function win ()
   return hs.window.frontmostWindow()
+end
+function winHalfLeft() win():move(hs.layout.left50) end
+function winCenter() win():move('[25,25,75,75]') end
+function winMax () win():maximize() end
+function winRightHalf() win():move(hs.layout.right50) end
+function winLoopScreen()
+  local win = win()
+  win:moveToScreen(win:screen():next(), true, true)
 end
 function saveLayout ()
   notify('布局', '保存')
@@ -38,9 +46,3 @@ caffeinateWatcher = hs.caffeinate.watcher.new(function(e)
     saveLayout()
   end
 end):start()
-
-function winHalfLeft() win():move(hs.layout.left50) end
-function winCenter() win():move('[25,25,75,75]') end
-function winMax () win():maximize() end
-function winRightHalf() win():move(hs.layout.right50) end
-function winLoopScreen() local win = win(); win:moveToScreen(win:screen():next(),true, true) end

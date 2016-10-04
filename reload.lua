@@ -1,5 +1,5 @@
-pathWatcher = hs.pathwatcher.new(conf.confFolder, function (files)
-  hs.fnutils.find(files, function (file)
+pathWatcher = hs.pathwatcher.new(hs.configdir, function (files)
+  util.find(files, function (file)
     if file:sub(-4) == '.lua' then
       reload()
       return true

@@ -1,15 +1,27 @@
 --[[
-Layer 0
+取 Apple 键盘和 60% 键盘想同的部分作为基础
 ,-----------------------------------------------------------------------------------------.
 |  `  |  1  |  2  |  3  |  4  |  5  |  6  |  7  |  8  |  9  |  0  |  -  |  =  |   BSPC    |
 |-----------------------------------------------------------------------------------------|
 |   TAB  |  Q  |  W  |  E  |  R  |  T  |  Y  |  U  |  I  |  O  |  P  |  [  |  ]  |    \   |
 |-----------------------------------------------------------------------------------------|
-|  ESC/LCTL  |  A  |  S  |  D  |  F  |  G  |  H  |  J  |  K  |  L  |  ;  |  '  |          |
+|    CAPS    |  A  |  S  |  D  |  F  |  G  |  H  |  J  |  K  |  L  |  ;  |  '  |          |
 |-----------------------------------------------------------------------------------------|
-|   LSFT/F13   |  Z  |  X  |  C  |  V  |  B  |  N  |  M  |  ,  |  .  |  /  |              |
+|    LSFT     |  Z  |  X  |  C  |  V  |  B  |  N  |  M  |  ,  |  .  |  /  |      UP       |
 |-----------------------------------------------------------------------------------------|
-|   |F12/Layer 1| LALT | LGUI |       SPACE/Ctrl-Alt-Cmd          | F19/Layer 2 |         |
+|     | LCTL | LALT | LGUI |              SPACE                     | RGUI |LEFT|DOWN|RGHT|
+`-----------------------------------------------------------------------------------------'
+Layer 0(默认层)
+,-----------------------------------------------------------------------------------------.
+|     |     |     |     |     |     |     |     |     |     |     |     |     |           |
+|-----------------------------------------------------------------------------------------|
+|        |     |     |     |     |     |     |     |     |     |     |     |     |        |
+|-----------------------------------------------------------------------------------------|
+|   LCTL/ESC |     |     |     |     |     |     |     |     |     |     |     |          |
+|-----------------------------------------------------------------------------------------|
+|   LSFT/F13   |     |     |     |     |     |     |     |     |     |     |              |
+|-----------------------------------------------------------------------------------------|
+|     | F12/Layer 1 |     |     |    SPACE/LCTL-LALTL-LGUI     |F19|    |DOWN/Layer 2|    |
 `-----------------------------------------------------------------------------------------'
 Layer 1
 ,-----------------------------------------------------------------------------------------.
@@ -17,293 +29,281 @@ Layer 1
 |-----------------------------------------------------------------------------------------|
 |       |       |     |     |     |     |     |     |     |     |     |     |     |       |
 |-----------------------------------------------------------------------------------------|
-|    LCTL    |  B-  |  B+  | kb- | kb+ | kbT | LEFT| DOWN | UP | RGHT |     |     |       |
+|            |  B-  |  B+  | KB- | KB+ | KBT | LEFT| DOWN | UP | RGHT |     |     |       |
 |-----------------------------------------------------------------------------------------|
-|             |  V-  |  V+  | Mute | Pre | Play | Next |                                  |
+|             |  V-  |  V+  | MUTE | MPRV | MPLY | MNXT |                                 |
 |-----------------------------------------------------------------------------------------|
 |                                                                                         |
 `-----------------------------------------------------------------------------------------'
 Layer 2
+,-----------------------------------------------------------------------------------------.
+|     |     |     |     |     |     |     |     |     |     |     |     |     |           |
+|-----------------------------------------------------------------------------------------|
+|        |     |     |     |     |     |     |     |     |     |     |     |     |        |
+|-----------------------------------------------------------------------------------------|
+|            |     |     |     |     |     |     |     |     |     |     |     |          |
+|-----------------------------------------------------------------------------------------|
+|              |     |     |     |     |     |     |     |     |     |     |              |
+|-----------------------------------------------------------------------------------------|
+|     |       |      |      |                                       |      |    |    |    |
+`-----------------------------------------------------------------------------------------'
 --]]
 
-local eventtap = hs.eventtap
-local stroke = eventtap.keyStroke
-local strokes = eventtap.keyStrokes
-local event = eventtap.event
-local newKeyEvent = event.newKeyEvent
-local newSystemKeyEvent = event.newSystemKeyEvent
-local types = event.types
-local properties = event.properties
-
-function systemKey (name)
-  newSystemKeyEvent(name, true):post()
+local press, text = hs.eventtap.keyStroke, hs.eventtap.keyStrokes
+local key, sys = hs.eventtap.event.newKeyEvent, function (name)
+  hs.eventtap.event.newSystemKeyEvent(name, true):post()
   hs.timer.usleep(101)
-  newSystemKeyEvent(name, false):post()
+  hs.eventtap.event.newSystemKeyEvent(name, false):post()
 end
+local types = hs.eventtap.event.types
+local codes = hs.keycodes.map
+codes.leftShift = 56
+codes.leftCtrl = 59
+codes.rightCmd = 54
 
 local state = {
-  isLeftShiftDown = false,
-
-  isSpaceDown = false,
-  isSpaceCombo = false,
-  skipSpaceTimes = 0,
-
-  isEscDown = false,
-  isEscCombo = false,
-  skipEscTimes = 0,
-
-  isLeftCtrlDown = false,
-  isLeftCtrlCombo = false,
-
-  isRightCmdDown = false,
-  isRightCmdCombo = false,
+  startTime = now(),
 }
 
-
-eventtapWatcher = hs.eventtap.new({ types.keyDown, types.keyUp, types.flagsChanged }, function(e)
-  local keyboardType = e:getProperty(properties.keyboardEventKeyboardType)
-  if not (util.contains(conf.enabledKeyboard, keyboardType) and keyboardType) then
+eventtapWatcher = hs.eventtap.new({ types.keyDown, types.keyUp, types.flagsChanged, types.NSSystemDefined }, function(e)
+  local keyboardType = e:getProperty(hs.eventtap.event.properties.keyboardEventKeyboardType)
+  local raw = e:getRawEventData()
+  local data = raw.NSEventData.data1
+  if not util.contains({264960, 264704}, data) and (not keyboardType or not util.contains(conf.enabledKeyboard, keyboardType)) then
     return false
   end
-  local eventType = types[e:getType()]
-  local char = e:getCharacters()
-  local raw = e:getRawEventData()
-  local code = raw.CGEventData.keycode
-  local flags = e:getFlags()
+  local eType, code, flagsTable = e:getType(), e:getKeyCode(), e:getFlags()
+  local char = raw.NSEventData.charactersIgnoringModifiers
+  local rawChar = raw.NSEventData.characters
   local flagsArray = {}
-  for k,v in pairs(flags) do
+  for k,v in pairs(flagsTable) do
     table.insert(flagsArray, k)
   end
   table.sort(flagsArray)
-  flagsStr = inspect(flagsArray)
-  local rawFlags = raw.CGEventData.flags
-  local rawType = raw.CGEventData.type
-  local data = raw.NSEventData.data1
-  local rawModifier = raw.NSEventData.modifierFlags
-  local rawChar = raw.NSEventData.charactersIgnoringModifiers
+  flags = table.concat(flagsArray, '-')
 
   -- debug
-  -- print(eventType, char, rawChar, code, flagsStr, rawflags, data, rawType, rawModifier)
+  put(string.format("%.4f", now()-state.startTime), char, rawChar, code, flags, types[eType], data)
 
-  function isLeftShiftDown ()
-    return code == 56 and flagsStr == inspect({'shift'})
-  end
-  function isLeftShiftTap ()
-    return code == 56 and flagsStr == inspect({}) and state.isLeftShiftDown
-  end
-
-  function isSpaceDown ()
-    return code == 49 and eventType == 'keyDown' and util.contains({inspect({}), inspect({'fn'})}, flagsStr) and state.skipSpaceTimes == 0
-  end
-  function isSpaceUp ()
-    return code == 49 and eventType == 'keyUp' and util.contains({inspect({}), inspect({'fn'})}, flagsStr) and state.skipSpaceTimes == 0
-  end
-  function isSpaceComboDown ()
-    return state.isSpaceDown and eventType == 'keyDown' and util.contains({inspect({}), inspect({'fn'})}, flagsStr)
-  end
-  function isSpaceComboUp ()
-    return state.isSpaceCombo and state.isSpaceDown and eventType == 'keyUp' and util.contains({inspect({}), inspect({'fn'})}, flagsStr)
-  end
-
-  function isEscDown ()
-    return code == 53 and eventType == 'keyDown' and state.skipEscTimes == 0
-  end
-  function isEscUp ()
-    return code == 53 and eventType == 'keyUp' and state.skipEscTimes == 0
-  end
-  function isEscComboDown ()
-    return state.isEscDown and eventType == 'keyDown'
-  end
-  function isEscComboUp ()
-    return state.isEscCombo and state.isEscDown and eventType == 'keyUp'
-  end
-
-  function isLeftCtrlDown ()
-    return code == 59 and eventType == 'flagsChanged' and flagsStr == inspect({'ctrl'})
-  end
-  function isLeftCtrlUp ()
-    return code == 59 and eventType == 'flagsChanged' and flagsStr == inspect({})
-  end
-  function isLeftCtrlComboDown ()
-    return state.isLeftCtrlDown and eventType == 'keyDown' and flagsStr == inspect({'ctrl'})
-  end
-  function isLeftCtrlComboUp ()
-    return state.isLeftCtrlCombo and state.isLeftCtrlDown and eventType == 'keyUp' and flagsStr == inspect({'ctrl'})
-  end
-
-  function isRightCmdDown ()
-    return code == 54 and eventType == 'flagsChanged' and flagsStr == inspect({'cmd'})
-  end
-  function isRightCmdUp ()
-    return code == 54 and eventType == 'flagsChanged' and flagsStr == inspect({})
-  end
-  function isRightCmdComboDown ()
-    return state.isRightCmdDown and eventType == 'keyDown' and flagsStr == inspect({'cmd'})
-  end
-  function isRightCmdComboUp ()
-    return state.isRightCmdCombo and state.isRightCmdDown and eventType == 'keyUp' and flagsStr == inspect({'cmd'})
-  end
-
-  if false then
-
-  -- esc: hold->ctrl
-  -- caps lock 太难搞...我已经放弃了, 升级到 10.12 beta 之后, 可以修改修饰键, 把 caps lock 改为 esc
-  elseif isEscDown() then
-    state.isEscDown = true
-    return true
-  elseif isEscUp() then
-    state.isEscDown = false
-    if state.isEscCombo then
-      state.isEscCombo = false
-    else
-      state.skipEscTimes = 2
-      stroke({}, 'escape')
+  function isKey (codeOrName, flagsStrOrArray, eventType, dataVal)
+    if codeOrName then
+      if type(codeOrName) == 'number' then
+        if codeOrName ~= code then
+          return
+        end
+      elseif codes[codeOrName] ~= code then
+        return
+      end
+    end
+    if eventType then
+      if type(eventType) == 'table' then
+        if not util.find(eventType, function (i)
+          return types[i] == eType
+        end) then
+          return
+        end
+      elseif types[eventType] ~= eType then
+        return
+      end
+    end
+    if flagsStrOrArray then
+      if type(flagsStrOrArray) == 'string' then
+        if flagsStrOrArray ~= flags then
+          return
+        end
+      else
+        if not util.contains(flagsStrOrArray, flags) then
+          return
+        end
+      end
+    end
+    if dataVal then
+      if dataVal ~= data then
+        return false
+      end
     end
     return true
-  elseif isEscComboDown() then
-    state.isEscCombo = true
-    flagsArray = util.concat(flagsArray, {'ctrl'})
-    return true, { newKeyEvent(flagsArray, '', true):setKeyCode(code),  newKeyEvent(flagsArray, '', false):setKeyCode(code)}
-  elseif isEscComboUp() then
+  end
+  if nil then
+  elseif isKey('space', '', 'keyDown') and includes({0, nil}, state.skipSpaceTimes) then -- SPACE/LCTL-LALTL-LGUI
+    state.spaceDown = true
     return true
-
-  -- left shift: tap->f13
-  elseif isLeftShiftDown() then
-    state.isLeftShiftDown = true
-    return false
-  elseif isLeftShiftTap() then
-    state.isLeftShiftDown = false
-    stroke({}, 'f13')
-    return true
-
-  -- space: hold->cmd-ctrl-alt
-  elseif isSpaceDown() then
-    state.isSpaceDown = true
-    return true
-  elseif isSpaceUp() then
-    state.isSpaceDown = false
-    if state.isSpaceCombo then
-      state.isSpaceCombo = false
+  elseif isKey('space', '', 'keyUp') and includes({0, nil}, state.skipSpaceTimes) then
+    state.spaceDown = false
+    if state.spaceCombo then
+      state.spaceCombo = false
     else
       state.skipSpaceTimes = 2
-      stroke({}, 'space')
+      press({}, 'space')
     end
     return true
-  elseif isSpaceComboDown() then
-    state.isSpaceCombo = true
-    flagsArray = util.concat(flagsArray, {'cmd', 'alt' , 'ctrl'})
-    return true, { newKeyEvent(flagsArray, '', true):setKeyCode(code),  newKeyEvent(flagsArray, '', false):setKeyCode(code)}
-  elseif isSpaceComboUp() then
+  elseif isKey(nil, nil, 'keyDown') and state.spaceDown then
+    state.spaceCombo = true
+    util.concat(flagsArray, {'cmd', 'alt' , 'ctrl'})
+    return true, { key(flagsArray, '', true):setKeyCode(code), key(flagsArray, '', false):setKeyCode(code) }
+  elseif isKey(nil, nil, 'keyUp') and state.spaceDown and state.spaceCombo then
     return true
-
-  -- left ctrl: tap->f12, hold->layer 1
-  elseif isLeftCtrlDown() then
-    state.isLeftCtrlDown = true
+  elseif isKey(nil, nil, 'NSSystemDefined', 264704) then -- CAPS: LCTL/ESC
+    hs.task.new(hs.configdir..'/led', function() end):start()
+    state.capsDown = true
     return true
-  elseif isLeftCtrlUp() then
-    state.isLeftCtrlDown = false
-    if state.isLeftCtrlCombo then
-      state.isLeftCtrlCombo = false
+  elseif isKey(nil, nil, 'NSSystemDefined', 264960) then
+    state.capsDown = false
+    if state.capsCombo then
+      state.capsCombo = false
     else
-      stroke({}, 'f12')
+      press({}, 'escape')
     end
     return true
-  elseif isLeftCtrlComboDown() then
-    state.isLeftCtrlCombo = true
+  elseif isKey(nil, nil, 'keyDown') and state.capsDown then
+    state.capsCombo = true
+    util.concat(flagsArray, {'ctrl'})
+    return true, { key(flagsArray, '', true):setKeyCode(code), key(flagsArray, '', false):setKeyCode(code) }
+  elseif isKey(nil, nil, 'keyUp') and state.capsDown then
+    return true
+  -- elseif isKey('escape', nil, 'keyDown') and includes({0, nil}, state.skipEscTimes) then -- ESC: LCTL/ESC(os >= 10.12.1 时, 可设置 CAPS->ESC)
+  --   state.escDown = true
+  --   return true
+  -- elseif isKey('escape', nil, 'keyUp') and includes({0, nil}, state.skipEscTimes) then
+  --   state.escDown = false
+  --   if state.escCombo then
+  --     state.escCombo = false
+  --   else
+  --     state.skipEscTimes = 2
+  --     press({}, 'escape')
+  --   end
+  --   return true
+  -- elseif isKey(nil, nil, 'keyDown') and state.escDown then
+  --   state.escCombo = true
+  --   util.concat(flagsArray, {'ctrl'})
+  --   return true, { key(flagsArray, '', true):setKeyCode(code), key(flagsArray, '', false):setKeyCode(code) }
+  -- elseif isKey(nil, nil, 'keyUp') and state.escDown then
+  --   return true
+  elseif isKey('leftShift', 'shift', 'flagsChanged') then -- LSFT: LSFT/F13
+    state.leftShiftDown = true
+    return true
+  elseif isKey('leftShift', '', 'flagsChanged') then
+    if state.leftShiftDown then
+      state.leftShiftDown = false
+      press({}, 'f13')
+      -- switchInput()
+    end
+  elseif isKey('rightCmd', 'cmd', 'flagsChanged') then -- RGUI: F19
+    state.rightCmdDown = true
+    return true
+  elseif isKey('rightCmd', '', 'flagsChanged') then
+    if state.rightCmdDown then
+      state.rightCmdDown = false
+      press({}, 'f19')
+    end
+  elseif isKey('leftCtrl', 'ctrl', 'flagsChanged') then -- LCTL: F12/Layer 1
+    state.leftCtrlDown = true
+    return true
+  elseif isKey('leftCtrl', '', 'flagsChanged') and state.leftCtrlDown then
+    state.leftCtrlDown = false
+    if state.leftCtrlCombo then
+      state.leftCtrlCombo = false
+    else
+      press({}, 'f12')
+    end
+    return true
+  elseif isKey(nil, 'ctrl', 'keyDown') and state.leftCtrlDown then
+    state.leftCtrlCombo = true
     if false then
-    elseif rawChar == '1' then
-      stroke({}, 'f1')
-    elseif rawChar == '2' then
-      stroke({}, 'f2')
-    elseif rawChar == '3' then
-      stroke({}, 'f3')
-    elseif rawChar == '4' then
-      stroke({}, 'f4')
-    elseif rawChar == '5' then
-      stroke({}, 'f5')
-    elseif rawChar == '6' then
-      stroke({}, 'f6')
-    elseif rawChar == '7' then
-      stroke({}, 'f7')
-    elseif rawChar == '8' then
-      stroke({}, 'f8')
-    elseif rawChar == '9' then
-      stroke({}, 'f9')
-    elseif rawChar == '0' then
-      stroke({}, 'f10')
-    elseif rawChar == '-' then
-      stroke({}, 'f11')
-    elseif rawChar == '=' then
-      stroke({}, 'f12')
-    elseif code == 51 then
-      return true, { newKeyEvent({'fn'}, '', true):setKeyCode(117),  newKeyEvent({'fn'}, '', false):setKeyCode(117)}
-    elseif code == 53 then
-      hs.osascript._osascript('tell application "System Events" to key code 59', 'AppleScript')
-    elseif rawChar == 'z' then
-      systemKey('SOUND_DOWN')
-    elseif rawChar == 'x' then
-      systemKey('SOUND_UP')
-    elseif rawChar == 'c' then
-      systemKey('MUTE')
-    elseif rawChar == 'v' then
-      systemKey('PREVIOUS')
-    elseif rawChar == 'b' then
-      systemKey('PLAY')
-    elseif rawChar == 'n' then
-      systemKey('NEXT')
-    elseif rawChar == 'a' then
-      systemKey('BRIGHTNESS_DOWN')
-    elseif rawChar == 's' then
-      systemKey('BRIGHTNESS_UP')
-    elseif rawChar == 'd' then
-      systemKey('ILLUMINATION_DOWN')
-    elseif rawChar == 'f' then
-      systemKey('ILLUMINATION_UP')
-    elseif rawChar == 'g' then
-      systemKey('ILLUMINATION_TOGGLE')
-    elseif rawChar == 'g' then
-      systemKey('ILLUMINATION_TOGGLE')
-    elseif rawChar == 'h' then
-      stroke({'fn'}, 'left')
-    elseif rawChar == 'j' then
-      stroke({'fn'}, 'down')
-    elseif rawChar == 'k' then
-      stroke({'fn'}, 'up')
-    elseif rawChar == 'l' then
-      stroke({'fn'}, 'right')
-    end
-    return true
-  elseif isLeftCtrlComboUp() then
-    return true
-
-  -- right cmd: tap->f19, hold->layer 2
-  elseif isRightCmdDown() then
-    state.isRightCmdDown = true
-    return true
-  elseif isRightCmdUp() then
-    state.isRightCmdDown = false
-    if state.isRightCmdCombo then
-      state.isRightCmdCombo = false
+    elseif isKey('1') then
+      press({}, 'f1')
+    elseif isKey('2') then
+      press({}, 'f2')
+    elseif isKey('3') then
+      press({}, 'f3')
+    elseif isKey('4') then
+      press({}, 'f4')
+    elseif isKey('5') then
+      press({}, 'f5')
+    elseif isKey('6') then
+      press({}, 'f6')
+    elseif isKey('7') then
+      press({}, 'f7')
+    elseif isKey('8') then
+      press({}, 'f8')
+    elseif isKey('9') then
+      press({}, 'f9')
+    elseif isKey('0') then
+      press({}, 'f10')
+    elseif isKey('-') then
+      press({}, 'f11')
+    elseif isKey('=') then
+      press({}, 'f12')
+    elseif isKey('delete') then
+      press({}, 'forwarddelete')
+    elseif isKey('z') then
+      sys('SOUND_DOWN')
+    elseif isKey('x') then
+      sys('SOUND_UP')
+    elseif isKey('c') then
+      sys('MUTE')
+    elseif isKey('v') then
+      sys('PREVIOUS')
+    elseif isKey('b') then
+      sys('PLAY')
+    elseif isKey('n') then
+      sys('NEXT')
+    elseif isKey('a') then
+      sys('BRIGHTNESS_DOWN')
+    elseif isKey('s') then
+      sys('BRIGHTNESS_UP')
+    elseif isKey('d') then
+      sys('ILLUMINATION_DOWN')
+    elseif isKey('f') then
+      sys('ILLUMINATION_UP')
+    elseif isKey('g') then
+      sys('ILLUMINATION_TOGGLE')
+    elseif isKey('g') then
+      sys('ILLUMINATION_TOGGLE')
+    elseif isKey('h') then
+      press({'fn'}, 'left')
+    elseif isKey('j') then
+      press({'fn'}, 'down')
+    elseif isKey('k') then
+      press({'fn'}, 'up')
+    elseif isKey('l') then
+      press({'fn'}, 'right')
     else
-      stroke({}, 'f19')
+      flagsArray = hs.fnutils.filter(flagsArray, function(i) return i ~= 'ctrl' end)
+      return true, { key(flagsArray, '', true):setKeyCode(code), key(flagsArray, '', false):setKeyCode(code) }
     end
     return true
-  elseif isRightCmdComboDown() then
-    state.isRightCmdCombo = true
+  elseif isKey(nil, 'ctrl', 'keyUp') and state.leftCtrlDown and state.leftCtrlCombo then
     return true
-  elseif isRightCmdComboUp() then
+  elseif isKey('down', 'fn', 'keyDown') and includes({0, nil}, state.skipDownTimes) then -- DOWN: DOWN/Layer 2
+    state.downDown = true
     return true
-
-
+  elseif isKey('down', 'fn', 'keyUp') and state.downDown and includes({0, nil}, state.skipDownTimes) then
+    state.downDown = false
+    if state.downCombo then
+      state.downCombo = false
+    else
+      state.skipDownTimes = 2
+      press({}, 'down')
+    end
+    return true
+  elseif isKey(nil, '', 'keyDown') and state.downDown then
+    state.downCombo = true
+    return true
+  elseif isKey(nil, '', 'keyUp') and state.downDown and state.downCombo then
+    return true
+  elseif char and rawChar and string.match(char, '%l+') and string.match(rawChar, '%u+') then
+    return true, { key(flagsArray, char, eType == types.keyDown) }
   end
-
-  if state.skipSpaceTimes > 0 then
+  if state.skipSpaceTimes and state.skipSpaceTimes > 0 then
     state.skipSpaceTimes = state.skipSpaceTimes - 1
   end
-  if state.skipEscTimes > 0 then
+  if state.skipEscTimes and state.skipEscTimes > 0 then
     state.skipEscTimes = state.skipEscTimes - 1
   end
-  state.isLeftShiftDown = false
-
-  return false
+  if state.skipDownTimes and state.skipDownTimes > 0 then
+    state.skipDownTimes = state.skipDownTimes - 1
+  end
+  state.leftShiftDown = false
+  return
 end):start()

@@ -1,7 +1,7 @@
 conf = {
-  confFolder = '~/.hammerspoon/',
+  debug = true,
   externalDevice = {
-    productID = { 50478 },
+    productID = { },
     productName = { 'GH60' },
   },
   enabledKeyboard = { 43 },

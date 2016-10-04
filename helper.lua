@@ -33,3 +33,27 @@ end
 
 -- inspect
 inspect = hs.inspect
+
+-- deepEqual
+function isEqual (a, b)
+  util.sortByKeys(a)
+  util.sortByKeys(b)
+  return inspect(a) == inspect(b)
+end
+
+-- debug
+function put (...)
+  if conf.debug then
+    print(...)
+  end
+end
+
+-- includes
+function includes (list, item)
+  for i=1,#list+1 do
+    if item == list[i] then
+      return true
+    end
+  end
+  return false
+end
