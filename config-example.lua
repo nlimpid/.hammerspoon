@@ -5,7 +5,4 @@ conf = {
     productName = { 'GH60' },
   },
   enabledKeyboard = { 43 },
-  pwd = {
-    os = 'system',
-  },
 }

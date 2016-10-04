@@ -1,9 +1,9 @@
 function unloadKeyboad()
-  AS('do shell script "echo '..conf.pwd.os..' | sudo -S kextunload /System/Library/Extensions/AppleUSBTopCase.kext/Contents/PlugIns/AppleUSBTCKeyboard.kext/"')
+  SH('echo '..getSystemPwd()..' | sudo -S kextunload /System/Library/Extensions/AppleUSBTopCase.kext/Contents/PlugIns/AppleUSBTCKeyboard.kext/')
   notify('内置键盘', '禁用')
 end
 function loadKeyboad(slient)
-  AS('do shell script "echo '..conf.pwd.os..' | sudo -S kextload /System/Library/Extensions/AppleUSBTopCase.kext/Contents/PlugIns/AppleUSBTCKeyboard.kext/"')
+  SH('echo '..getSystemPwd()..' | sudo -S kextload /System/Library/Extensions/AppleUSBTopCase.kext/Contents/PlugIns/AppleUSBTCKeyboard.kext/')
   if not slient then
     notify('内置键盘', '启用')
   end

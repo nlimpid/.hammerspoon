@@ -38,7 +38,7 @@ caffeinateWatcher = hs.caffeinate.watcher.new(function(e)
   -- 5, lock; 6, unlock;
   -- sleep display: 3, 10; 4, 11
   -- sleep: 3, 10, 0, 4, 11
-  -- print(hs.timer.localTime(), e)
+  -- put(hs.timer.localTime(), e)
   if e == hs.caffeinate.watcher.screensDidUnlock then
     restoreLayout()
   end

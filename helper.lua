@@ -23,7 +23,15 @@ end
 
 -- AppleScript
 function AS (val)
-  hs.osascript._osascript(val, 'AppleScript')
+  return hs.osascript.applescript(val)
+end
+function SH (val)
+  return AS('set result to do shell script "'..val..'"')
+end
+
+function getSystemPwd ()
+  local succeeded, result = SH('security find-generic-password -s hammerspoon -a system -w')
+  return result
 end
 
 -- delay
