@@ -125,6 +125,27 @@ eventtapWatcher = hs.eventtap.new({ types.keyDown, types.keyUp, types.flagsChang
     return true
   end
   if nil then
+  elseif isKey('fn', 'fn', 'flagsChanged') then -- LCTL: F12/Layer 1
+    print('fn pressed')
+    state.fnDown = true
+    return true
+  elseif isKey('fn', '', 'flagsChanged') and state.fnDown then
+    state.fnDown = false
+    print('fn release')
+    if state.fnCombo then
+      state.fnCombo = false
+    else
+      press({}, 'f15')
+    end
+    return true
+  elseif isKey(nil, 'fn', 'keyDown') and state.fnDown then
+    print('hello')
+    state.fnCombo = true
+    if false then
+    elseif isKey('1') then
+      press({}, 'f1')
+    end
+    return true
   elseif isKey('space', '', 'keyDown') and includes({0, nil}, state.skipSpaceTimes) then -- SPACE/LCTL-LALTL-LGUI
     state.spaceDown = true
     return true
@@ -180,11 +201,13 @@ eventtapWatcher = hs.eventtap.new({ types.keyDown, types.keyUp, types.flagsChang
   -- elseif isKey(nil, nil, 'keyUp') and state.escDown then
   --   return true
   elseif isKey('leftShift', 'shift', 'flagsChanged') then -- LSFT: LSFT/F13
+    print('leftShiftDown')
     state.leftShiftDown = true
     return true
   elseif isKey('leftShift', '', 'flagsChanged') then
     if state.leftShiftDown then
       state.leftShiftDown = false
+      print('leftshiftUp')
       press({}, 'f13')
       -- switchInput()
     end
