@@ -7,6 +7,9 @@ require './helper'
 -- 自动重载
 require './reload'
 
+-- hhkb fn
+require './fn'
+
 -- 按键
 require './key'
 
